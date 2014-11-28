@@ -22,11 +22,13 @@ class U500pxConnectionSettingsUI
 
   def create_controls(parent_dlg)
     dlg = parent_dlg
-    create_control(:setting_name_static,    Static,       dlg, :label=>"Your Accounts:")
-    create_control(:setting_name_combo,     ComboBox,     dlg, :editable=>false, :sorted=>true, :persist=>false)
-    create_control(:setting_delete_btn,     Button,       dlg, :label=>"Delete")
-    create_control(:add_account_instructions,    Static,       dlg, :label=>"Note: If you have an active 500px session in your browser, 500px will authorize Photo Mechanic for the username associated with that session. Otherwise, 500px will prompt you to login.")
-    create_control(:add_account_button,     Button,       dlg, :label=>"Add Account")
+    create_control(:setting_name_static,      Static,       dlg, :label=>"Your Accounts:")
+    create_control(:setting_name_combo,       ComboBox,     dlg, :editable=>false, :sorted=>true, :persist=>false)
+    create_control(:setting_delete_btn,       Button,       dlg, :label=>"Delete")
+    create_control(:add_account_instructions, Static,       dlg, :label=>"Note: If you have an active 500px session in your browser, 500px will authorize Photo Mechanic for the username associated with that session. Otherwise, 500px will prompt you to login.")
+    create_control(:add_account_name_static,  Static,       dlg, :label=>"Account name:")
+    create_control(:add_account_name_edit,    EditControl,  dlg, :value=>"", :persist=>false)
+    create_control(:add_account_button,       Button,       dlg, :label=>"Add Account")
   end
 
   def layout_controls(container)
@@ -36,13 +38,16 @@ class U500pxConnectionSettingsUI
     c << @setting_name_static.layout(0, c.base, -1, sh)
     c.pad_down(0).mark_base
     c << @setting_name_combo.layout(0, c.base, -150, eh)
-      c << @setting_delete_btn.layout(-140, c.base, -80, eh)
+    c << @setting_delete_btn.layout(-140, c.base, -80, eh)
     c.pad_down(0).mark_base
     c.set_prev_right_pad(5).inset(10,30,-10,-10).mark_base
     c << add_account_instructions.layout(0, c.base, -1, 3*sh)
     c.pad_down(0).mark_base
     c.set_prev_right_pad(5).inset(10,30,-10,-10).mark_base
-    c << @add_account_button.layout(0, c.base, -340, eh)
+    c << @add_account_name_static.layout(0, c.base, 200, sh)
+    c.pad_down(0).mark_base
+    c << @add_account_name_edit.layout(0, c.base, -150, eh)
+    c << @add_account_button.layout(-140, c.base, -80, eh)
     c.pad_down(0).mark_base
   end
 end
@@ -75,25 +80,25 @@ class U500pxConnectionSettings
   end
 
   class SettingsData
-    attr_accessor :auth_token, :auth_token_secret, :user_name
+    attr_accessor :auth_token, :auth_token_secret
+    
+    def initialize(name, token, token_secret)
+      @account_name = name
+      @auth_token = token
+      @auth_token_secret = token_secret
+      self
+    end
+    
+    def appears_valid?
+      return ! (@account_name.nil? || @account_name.empty? || @auth_token.nil? || @auth_token.empty? || @auth_token_secret.nil? || @auth_token_secret.empty?)
+    rescue
+      false
+    end
 
     def self.serialize_settings_hash(settings)
       out = {}
-      settings.each_pair do |name, settings_values|
-        if settings_values.is_a? Hash
-          user_name = settings_values[:user_name]
-          out[user_name] = [settings_values[:auth_token_secret], user_name, settings_values[:auth_token]]
-        else
-          # todo: make sure settings_values type is always the same in order to avoid this type checking
-          user_name = if settings_values.user_name.is_a?(String)
-                        settings_values.user_name
-                      elsif settings_values.user_name.is_a?(Integer)
-                        name
-                      else
-                        settings_values.user_name[0]
-                      end
-          out[user_name] = [settings_values.auth_token_secret, user_name, settings_values.auth_token]
-        end
+      settings.each_pair do |key, dat|
+        out[key] = [dat.auth_token, dat.auth_token_secret]
       end
       out
     end
@@ -101,39 +106,18 @@ class U500pxConnectionSettings
     def self.deserialize_settings_hash(input)
       settings = {}
       input.each_pair do |key, dat|
-        token_secret, user_name, token = dat
-        settings[key] = SettingsData.new({
-          :auth_token => token,
-          :auth_token_secret => token_secret,
-          :user_name => user_name
-        })
+        token, token_secret = dat
+        settings[key] = SettingsData.new(key, token, token_secret)
       end
       settings
     end
 
-    def initialize(args = {})
-      @auth_token = args[:auth_token]
-      @auth_token_secret = args[:auth_token_secret]
-      @user_name = args[:user_name]
-      self
-    end
-
-    def values
-      [auth_token, auth_token_secret, user_name]
-    end
-
-    def appears_valid?
-      !@auth_token.nil? && !@auth_token.empty? && !@auth_token_secret.nil? && !@auth_token_secret.empty?
-    rescue
-      false
-    end
   end
 
   def initialize(pm_api_bridge)
     @bridge = pm_api_bridge
     @prev_selected_settings_name = nil
     @settings = {}
-    @current_name = ''
   end
 
   def settings_selected_item
@@ -147,7 +131,6 @@ class U500pxConnectionSettings
   end
 
   def add_event_handlers
-    @ui.setting_name_combo.on_edit_change { handle_rename_selected }
     @ui.setting_name_combo.on_sel_change { handle_sel_change }
     @ui.add_account_button.on_click { handle_add_account }
     @ui.setting_delete_btn.on_click { handle_delete_button }
@@ -163,9 +146,8 @@ class U500pxConnectionSettings
 
   def save_state(serializer)
     return unless @ui
-    # save_current_values_to_settings
     self.class.store_settings_data(serializer, @settings)
-    serializer.store(DLG_SETTINGS_KEY, :selected_item, @current_name)
+    serializer.store(DLG_SETTINGS_KEY, :selected_item, current_account_name)
   end
 
   def restore_state(serializer)
@@ -174,7 +156,6 @@ class U500pxConnectionSettings
     select_previously_selected_account(serializer)
     select_first_account_if_none_selected
     store_selected_account
-
     load_current_values_from_settings
   end
 
@@ -206,17 +187,10 @@ class U500pxConnectionSettings
   end
 
   def save_current_values_to_settings(params={:name=>nil, :replace=>true})
-    key = params[:name] || @current_name
+    key = params[:name] || current_account_name
 
     if key && key === String
-      ensure_name_does_not_collide(key) unless params[:replace]
-
-      @settings[key] ||= SettingsData.new({
-        :auth_token => nil,
-        :auth_token_secret => nil,
-        :user_name => nil
-      })
-
+      @settings[key] ||= SettingsData.new(key, nil, nil)
       key
     end
   end
@@ -225,68 +199,13 @@ class U500pxConnectionSettings
     @ui.setting_name_combo.get_selected_item_text.to_s
   end
 
-  def ensure_name_does_not_collide(current_name)
-    if current_name.to_s.empty?
-      return "" unless current_values_worth_saving?
-      current_name = find_non_colliding_name("Untitled")
-    else
-      current_name = find_non_colliding_name(current_name)
-    end
-  end
-
   def load_current_values_from_settings
-    cur_name = current_account_name.to_s
-    data = @settings[cur_name]
-  end
-
-  def current_values_worth_saving?
-    ! (current_account_name.empty? && @current_name.empty?)
-  end
-
-  def find_non_colliding_name(want_name)
-    i = 1
-    new_name = want_name
-    while @ui.setting_name_combo.has_item? new_name
-      i += 1
-      new_name = "#{want_name} #{i}"
-    end
-    new_name
-  end
-
-  def rename_in_settings(old_name, new_name)
-    data = @settings[old_name]
-    @settings.delete old_name
-    @settings[new_name] = data
+    data = @settings[current_account_name]
   end
 
   def delete_in_settings(name)
     @settings.delete name
     @deleted = true
-  end
-
-  def handle_rename_selected
-    had_prev = ! @prev_selected_settings_name.nil?
-    cur_name = @ui.setting_name_combo.get_text.to_s
-    if cur_name != @prev_selected_settings_name
-      if had_prev
-        @ui.setting_name_combo.remove_item @prev_selected_settings_name
-      end
-
-      return "" if cur_name.strip.empty? && !current_values_worth_saving?
-      cur_name = "Untitled" if cur_name.strip.empty?
-      new_name = find_non_colliding_name(cur_name)
-
-      if had_prev
-        rename_in_settings(@prev_selected_settings_name, new_name)
-      else
-        saved_name = save_current_values_to_settings(:name=>new_name, :replace=>true)
-        return "" unless !saved_name.empty?
-      end
-      @ui.setting_name_combo.add_item new_name
-      @prev_selected_settings_name = new_name
-      cur_name = new_name
-    end
-    cur_name
   end
 
   def add_account_to_dropdown(name = nil)
@@ -313,21 +232,21 @@ class U500pxConnectionSettings
   end
 
   def handle_add_account
+    key = @ui.add_account_name_edit.get_text
+    if key.to_s.empty?
+      Dlg::MessageBox.ok("Please enter an account name", Dlg::MessageBox::MB_ICONEXCLAMATION)
+      return
+    end
+    if @settings[key]
+      return unless Dlg::MessageBox.ok_cancel?("Account #{key} already exist, Ok to overwrite?", Dlg::MessageBox::MB_ICONEXCLAMATION)
+    end
     save_account_callback = lambda do |client|
       if client.authenticated?
-        @current_name = key = client.user_name
-
-        @settings[key]  = SettingsData.new({
-          :auth_token => client.access_token,
-          :auth_token_secret => client.access_token_secret,
-          :user_name => client.user_name
-        })
-
+        @settings[key]  = SettingsData.new(key, client.access_token,client.access_token_secret)
         add_account_to_dropdown(key)
       end
     end
-
-    client.launch_pincode_authorization(save_account_callback)
+    client.get_500px_authorization(save_account_callback)
     @prev_selected_settings_name = nil
   end
 
@@ -345,6 +264,10 @@ class U500pxConnectionSettings
   end
 end
 
+
+################################################################################
+
+
 class U500pxFileUploaderUI
 
   include PM::Dlg
@@ -358,17 +281,14 @@ class U500pxFileUploaderUI
   SOURCE_RAW_LABEL = "Use the RAW"
   SOURCE_JPEG_LABEL = "Use the JPEG"
 
-#  DEST_EXISTS_UPLOAD_ANYWAY_LABEL = "Upload file anyway (files of same name can safely coexist)"
-#  DEST_EXISTS_RENAME_LABEL = "Rename file before uploading"
-#  DEST_EXISTS_SKIP_LABEL = "Skip file (do not upload)"
-
   def initialize(pm_api_bridge)
     @bridge = pm_api_bridge
   end
 
-  def operations_enabled?
-    false
-  end
+  # Is this function necessary???
+#  def operations_enabled?
+#    false
+#  end
 
   def create_controls(parent_dlg)
     dlg = parent_dlg
@@ -377,7 +297,7 @@ class U500pxFileUploaderUI
     create_control(:dest_account_static,       Static,      dlg, :label=>"Account")
     create_control(:dest_account_combo,        ComboBox,    dlg, :sorted=>true, :persist=>false)
 
-    create_control(:meta_group_box,            GroupBox,    dlg, :label=>"500px Metadata:")
+    create_control(:meta_left_group_box,       GroupBox,    dlg, :label=>"500px Metadata:")
     create_control(:meta_category_static,      Static,      dlg, :label=>"Category")
     create_control(:meta_category_combo,       ComboBox,    dlg, :items=>[
                      "00 - Uncategorized",
@@ -409,9 +329,7 @@ class U500pxFileUploaderUI
                      "27 - Urban Exploration",
                      "25 - Wedding"
                    ], :selected=>"00 - Uncategorized", :sorted=>false, :persist=>true)
-
-    create_control(:meta_privacy_check,        CheckBox,    dlg, :label=>"Privacy")
-    
+    create_control(:meta_privacy_check,        CheckBox,    dlg, :label=>"Privacy")  
     create_control(:meta_license_static,       Static,      dlg, :label=>"License")
     create_control(:meta_license_combo,        ComboBox,    dlg, :items=>[
                      "00 - Standard 500px License",
@@ -422,7 +340,6 @@ class U500pxFileUploaderUI
                      "05 - Creative Commons License No Derivatives",
                      "06 - Creative Commons License Share Alike"
                    ], :selected=>"00 - Standard 500px License", :sorted=>false, :persist=>true)
-
     create_control(:meta_title_static,         Static,      dlg, :label=>"Title")
     create_control(:meta_title_edit,           EditControl, dlg, :value=>"{headine}", :multiline=>true)
     create_control(:meta_description_static,   Static,      dlg, :label=>"Description")
@@ -430,62 +347,46 @@ class U500pxFileUploaderUI
     create_control(:meta_tags_static,          Static,      dlg, :label=>"Tags")
     create_control(:meta_tags_edit,            EditControl, dlg, :value=>"{keywords}", :multiline=>true)
 
-    create_control(:meta_exif_camera_static,   Static,      dlg, :label=>"Camera")
-    create_control(:meta_exif_camera_edit,     EditControl, dlg, :value=>"{camera}", :multiline=>false)
-    create_control(:meta_exif_lens_static,     Static,      dlg, :label=>"Lens")
-    create_control(:meta_exif_lens_edit,       EditControl, dlg, :value=>"{lenstype}", :multiline=>false)
-    create_control(:meta_exif_focal_static,    Static,      dlg, :label=>"Focal length")
-    create_control(:meta_exif_focal_edit,      EditControl, dlg, :value=>"{lens}", :multiline=>false)
-    create_control(:meta_exif_shutter_static,  Static,      dlg, :label=>"Shutter")
-    create_control(:meta_exif_shutter_edit,    EditControl, dlg, :value=>"{shutter}", :multiline=>false)
-    create_control(:meta_exif_aperture_static, Static,      dlg, :label=>"Aperture")
-    create_control(:meta_exif_aperture_edit,   EditControl, dlg, :value=>"{aperture}", :multiline=>false)
-    create_control(:meta_exif_iso_static,      Static,      dlg, :label=>"ISO")
-    create_control(:meta_exif_iso_edit,        EditControl, dlg, :value=>"{iso}", :multiline=>false)
-    create_control(:meta_exif_date_static,     Static,      dlg, :label=>"Taken")
-    create_control(:meta_exif_date_edit,       EditControl, dlg, :value=>"{datetime}", :multiline=>false)
-    
-#    create_control(:handle_add_account,   Button,         dlg, :label=>"Authorize...")
-#    create_control(:tweet_static, Static,       dlg, :label=> "Compose Tweet:", :align => 'right')
-#    create_control(:tweet_edit, EditControl,       parent_dlg, :value=> "", :multiline=>true, :persist=> false, :align => 'right')
-#    create_control(:tweet_length_static, Static,       dlg, :label=> "126", :align => 'left')
-
-    create_control(:transmit_group_box,         GroupBox,       dlg, :label=>"Transmit:")
-    create_control(:send_original_radio,        RadioButton,    dlg, :label=>"Original Photos", :checked=>true)
-    create_control(:send_jpeg_radio,            RadioButton,    dlg, :label=>"Saved as JPEG")
+    create_control(:meta_right_group_box,      GroupBox,    dlg, :label=>"500px Metadata:")
+    create_control(:exif_camera_static,        Static,      dlg, :label=>"Camera")
+    create_control(:exif_camera_edit,          EditControl, dlg, :value=>"{camera}", :multiline=>false)
+    create_control(:exif_lens_static,          Static,      dlg, :label=>"Lens")
+    create_control(:exif_lens_edit,            EditControl, dlg, :value=>"{lenstype}", :multiline=>false)
+    create_control(:exif_focal_static,         Static,      dlg, :label=>"Focal length")
+    create_control(:exif_focal_edit,           EditControl, dlg, :value=>"{lens}", :multiline=>false)
+    create_control(:exif_shutter_static,       Static,      dlg, :label=>"Shutter")
+    create_control(:exif_shutter_edit,         EditControl, dlg, :value=>"{shutter}", :multiline=>false)
+    create_control(:exif_aperture_static,      Static,      dlg, :label=>"Aperture")
+    create_control(:exif_aperture_edit,        EditControl, dlg, :value=>"{aperture}", :multiline=>false)
+    create_control(:exif_iso_static,           Static,      dlg, :label=>"ISO")
+    create_control(:exif_iso_edit,             EditControl, dlg, :value=>"{iso}", :multiline=>false)
+    create_control(:exif_date_static,          Static,      dlg, :label=>"Taken")
+    create_control(:exif_date_edit,            EditControl, dlg, :value=>"{datetime}", :multiline=>false)
+    create_control(:loc_lat_static,            Static,      dlg, :label=>"Latitude")
+    create_control(:loc_lat_edit,              EditControl, dlg, :value=>"{latitude}", :multiline=>false)
+    create_control(:loc_long_static,           Static,      dlg, :label=>"Longitude")
+    create_control(:loc_long_edit,             EditControl, dlg, :value=>"{longitude}", :multiline=>false)
+  
+    create_control(:transmit_group_box,        GroupBox,       dlg, :label=>"Transmit:")
+    create_control(:send_original_radio,       RadioButton,    dlg, :label=>"Original Photos", :checked=>true)
+    create_control(:send_jpeg_radio,           RadioButton,    dlg, :label=>"Saved as JPEG")
     RadioButton.set_exclusion_group(@send_original_radio, @send_jpeg_radio)
-    create_control(:send_desc_edit,             EditControl,    dlg, :value=>"Note: 500px's supported image formats are PNG, JPG and GIF.", :multiline=>true, :readonly=>true, :persist=>false)
+    create_control(:send_desc_edit,            EditControl,    dlg, :value=>"Note: 500px's supported image formats are PNG, JPG and GIF.", :multiline=>true, :readonly=>true, :persist=>false)
     create_jpeg_controls(dlg)
     create_image_processing_controls(dlg)
     create_operations_controls(dlg)
   end
 
-  STATIC_TEXT_HEIGHT = 20
-  EDIT_FIELD_HEIGHT = 24
-  COLOR_BUTTON_HEIGHT = 24
-  RIGHT_PAD = 5
-
   def layout_controls(container)
-    sh = STATIC_TEXT_HEIGHT
-    eh = EDIT_FIELD_HEIGHT
-    ch = COLOR_BUTTON_HEIGHT
-    rp = RIGHT_PAD
-    w1 = 400
+    sh, eh = 20, 24
 
     container.inset(15, 5, -15, -5)
 
     container.layout_with_contents(@dest_account_group_box, 0, 0, -1, -1) do |c|
-      c.set_prev_right_pad(rp).inset(10,20,-10,-5).mark_base
+      c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
 
       c << @dest_account_static.layout(0, c.base+3, 80, sh)
       c << @dest_account_combo.layout(c.prev_right, c.base, 200, eh)
-      # c << @authorize_button.layout(c.prev_right+5, c.base, 120, eh)
-
-      c.pad_down(0).mark_base
-
-#      c << @tweet_static.layout(0, c.base + 8, 100, sh)
-#      c << @tweet_edit.layout(c.prev_right, c.base + 8, w1, eh*2)
-#      c << @tweet_length_static.layout(c.prev_right + 3, c.base + eh*2 -sh/2, 70, sh)
 
       c.pad_down(5).mark_base
       c.mark_base.size_to_base
@@ -493,100 +394,106 @@ class U500pxFileUploaderUI
 
     container.pad_down(5).mark_base
 
-    container.layout_with_contents(@meta_group_box, 0, container.base, -1, -1) do |c|
-      c.set_prev_right_pad(rp).inset(10,20,-10,-5).mark_base
-   
+    container.layout_with_contents(@meta_left_group_box, 0, container.base, "50%-5", -1) do |c|
+      c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
+      
       c << @meta_category_static.layout(0, c.base+3, 80, sh)
       c << @meta_category_combo.layout(c.prev_right, c.base, 200, eh)
       c << @meta_privacy_check.layout(c.prev_right+15, c.base, 80, sh)
-
+      
       c << @meta_license_static.layout(0, c.base+eh+5+3, 80, sh)
       c << @meta_license_combo.layout(c.prev_right, c.base+eh+5, 200, eh)
 
       c << @meta_title_static.layout(0, c.base+2*(eh+5), 80, sh)
-      c << @meta_title_edit.layout(c.prev_right, c.base+2*(eh+5), w1, eh*2)
+      c << @meta_title_edit.layout(c.prev_right, c.base+2*(eh+5), -5, eh*2)
       c << @meta_description_static.layout(0, c.base+4*(eh+5), 80, sh)
-      c << @meta_description_edit.layout(c.prev_right, c.base+4*(eh+5), w1, eh*2)
+      c << @meta_description_edit.layout(c.prev_right, c.base+4*(eh+5), -5, eh*2)
       c << @meta_tags_static.layout(0, c.base+6*(eh+5), 80, sh)
-      c << @meta_tags_edit.layout(c.prev_right, c.base+6*(eh+5), w1, eh*2)
-
-      c << @meta_exif_camera_static.layout(80+w1+15, c.base, 80, sh)
-      c << @meta_exif_camera_edit.layout(c.prev_right, c.base, 200, eh)
-      c << @meta_exif_lens_static.layout(80+w1+15, c.base+eh+5, 80, sh)
-      c << @meta_exif_lens_edit.layout(c.prev_right, c.base+eh+5, 200, eh)
-      c << @meta_exif_focal_static.layout(80+w1+15, c.base+2*(eh+5), 80, sh)
-      c << @meta_exif_focal_edit.layout(c.prev_right, c.base+2*(eh+5), 200, eh)
-      c << @meta_exif_aperture_static.layout(80+w1+15, c.base+3*(eh+5), 80, sh)
-      c << @meta_exif_aperture_edit.layout(c.prev_right, c.base+3*(eh+5), 200, eh)
-      c << @meta_exif_shutter_static.layout(80+w1+15, c.base+4*(eh+5), 80, sh)
-      c << @meta_exif_shutter_edit.layout(c.prev_right, c.base+4*(eh+5), 200, eh)
-      c << @meta_exif_iso_static.layout(80+w1+15, c.base+5*(eh+5), 80, sh)
-      c << @meta_exif_iso_edit.layout(c.prev_right, c.base+5*(eh+5), 200, eh)
-      c << @meta_exif_date_static.layout(80+w1+15, c.base+6*(eh+5), 80, sh)
-      c << @meta_exif_date_edit.layout(c.prev_right, c.base+6*(eh+5), 200, eh)
+      c << @meta_tags_edit.layout(c.prev_right, c.base+6*(eh+5), -5, eh*2)
 
       c.pad_down(5).mark_base
+      c.mark_base.size_to_base
+    end
+    
+    container.layout_with_contents(@meta_right_group_box, "50%+5", container.base, -1, -1) do |c|
+      c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
+      
+      c << @exif_camera_static.layout(0, c.base, 80, sh)
+      c << @exif_camera_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @exif_lens_static.layout(0, c.base+eh+5, 80, sh)
+      c << @exif_lens_edit.layout(c.prev_right, c.base+eh+5, -5, eh)
+      c << @exif_focal_static.layout(0, c.base+2*(eh+5), 80, sh)
+      c << @exif_focal_edit.layout(c.prev_right, c.base+2*(eh+5), -5, eh)
+      c << @exif_aperture_static.layout(0, c.base+3*(eh+5), 80, sh)
+      c << @exif_aperture_edit.layout(c.prev_right, c.base+3*(eh+5), -5, eh)
+      c << @exif_shutter_static.layout(0, c.base+4*(eh+5), 80, sh)
+      c << @exif_shutter_edit.layout(c.prev_right, c.base+4*(eh+5), -5, eh)
+      c << @exif_iso_static.layout(0, c.base+5*(eh+5), 80, sh)
+      c << @exif_iso_edit.layout(c.prev_right, c.base+5*(eh+5), -5, eh)
+      c << @exif_date_static.layout(0, c.base+6*(eh+5), 80, sh)
+      c << @exif_date_edit.layout(c.prev_right, c.base+6*(eh+5), -5, eh)
+      c << @loc_lat_static.layout(0, c.base+7*(eh+5), 80, sh)
+      c << @loc_lat_edit.layout(c.prev_right, c.base+7*(eh+5), -5, sh)
+      c << @loc_long_static.layout(0, c.base+8*(eh+5), 80, sh)
+      c << @loc_long_edit.layout(c.prev_right, c.base+8*(eh+5), -5, sh)
 
+      c.pad_down(5).mark_base
       c.mark_base.size_to_base
     end
 
     container.pad_down(5).mark_base
+    container.mark_base.size_to_base
 
-    container.layout_with_contents(@transmit_group_box, 0, container.base, "50%-5", -1) do |xmit_container|
-      c = xmit_container # so we can rebase to this later
-      c.set_prev_right_pad(rp).inset(10,25,-10,-5).mark_base
+    container.pad_down(5).mark_base
 
-      c << @send_original_radio.layout(0, c.base, 120, eh)
-      save_right, save_base = c.prev_right, c.base
+    container.layout_with_contents(@operations_group_box, "50%+5", container.base, -1, -1) do |c|
+      c.set_prev_right_pad(5).inset(10,25,-10,-5).mark_base
+
+      c << @apply_iptc_check.layout(0, c.base, "50%-5", eh)
+      c << @stationery_pad_btn.layout("-50%+5", c.base, -5, eh)
       c.pad_down(5).mark_base
-      c << @send_jpeg_radio.layout(0, c.base, 120, eh)
-        c << @send_desc_edit.layout(save_right+5, save_base, -1, 76)
+      c << @preserve_exif_check.layout(0, c.base, -5, eh)
       c.pad_down(5).mark_base
 
-      layout_jpeg_controls(c, eh, sh)
+      c << @save_copy_check.layout(0, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @save_copy_subdir_radio.layout(30, c.base, "50%-35", eh)
+      c << @save_copy_subdir_edit.layout("50%+5", c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @save_copy_userdir_radio.layout(30, c.base, "50%", eh)
+      c << @save_copy_choose_userdir_btn.layout("50%+5", c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @save_copy_userdir_static.layout(0, c.base, -1, 2*sh)
 
-      c.layout_with_contents(@imgproc_group_box, 0, c.base, -1, -1) do |c|
-        c.set_prev_right_pad(rp).inset(10,25,-10,-5).mark_base
-        
-        w1, w2 = 70, 182
-        w1w = (w2 - w1)
-        layout_image_processing_controls(c, eh, sh, w1, w2, w1w)
-
-      end
-
-      c = xmit_container
       c.pad_down(5).mark_base
       c.mark_base.size_to_base
     end
 
-    container.layout_with_contents(@operations_group_box, "50%+5", container.base, -1, -1) do |c|
-      c.set_prev_right_pad(rp).inset(10,25,-10,-5).mark_base
+    container.layout_with_contents(@transmit_group_box, 0, container.base, "50%-5", -1) do |c|
+      c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
 
-      w1 = 30
-      c << @apply_iptc_check.layout(0, c.base, 170, eh)
-        c << @stationery_pad_btn.layout(-180, c.base, -11, eh)
-      c.pad_down(5).mark_base
-      c << @preserve_exif_check.layout(0, c.base, 300, eh)
-      c.pad_down(5).mark_base
-#      layout_renaming_controls(c, eh, sh, w1)
-
-      w2 = 200
-      c << @save_copy_check.layout(0, c.base, 300, eh)
-      c.pad_down(5).mark_base
-        c << @save_copy_subdir_radio.layout(w1, c.base, w2-w1, eh)
-          c << @save_copy_subdir_edit.layout(w2, c.base, -11, eh)
-        c.pad_down(5).mark_base
-        c << @save_copy_userdir_radio.layout(w1, c.base, w2-w1, eh)
-          c << @save_copy_choose_userdir_btn.layout(w2, c.base, 100, eh)
-      c.pad_down(5).mark_base
-      c << @save_copy_userdir_static.layout(w1+20, c.base, -1, sh)
+      c << @send_original_radio.layout(0, c.base, 120, eh)
+      c << @send_jpeg_radio.layout(0, c.base+eh+5, 120, eh)
+      c << @send_desc_edit.layout(c.prev_right+5, c.base, -1, 2*eh)
       c.pad_down(5).mark_base
 
-      c.pad_down(5).mark_base.size_to_base
+      layout_jpeg_controls(c, eh, sh)
+
+      c.layout_with_contents(@imgproc_group_box, 0, c.base, -1, -1) do |cc|
+        cc.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
+        
+        layout_image_processing_controls(cc, eh, sh, 80, 200, 120)
+
+        cc.pad_down(5).mark_base
+        cc.mark_base.size_to_base
+      end
+
+      c.pad_down(5).mark_base
+      c.mark_base.size_to_base
     end
 
-
-    container.pad_down(20).mark_base
+    container.pad_down(5).mark_base
+    container.mark_base.size_to_base
   end
 
   def have_source_raw_jpeg_controls?
@@ -617,24 +524,14 @@ class U500pxBackgroundDataFetchWorker
   end
 
   def do_task
-    validate_number_of_images
-
     return unless @dlg.account_parameters_dirty
 
     @dlg.reset_active_account
     check_status if @dlg.account_valid?
-#    @dlg.adjust_tweet_length_indicator
     @dlg.account_parameters_dirty = false
 
   rescue => e
     @dlg.set_status_text "Error communicating with 500px: #{e}"
-  end
-
-  def validate_number_of_images
-    if @dlg.num_files > 1
-      @dlg.set_status_text("More than one photo selected!")
-      @dlg.disable_ui
-    end
   end
 
   def check_status
@@ -644,8 +541,7 @@ class U500pxBackgroundDataFetchWorker
     if status.class === Hash && status['errors']
       @dlg.set_status_text(status['errors'].first['message'])
     else
-      # @dlg.disable_authorize_button
-      @dlg.set_status_text("You are logged in and ready to tweet.")
+      @dlg.set_status_text("You are logged in and ready to upload your images.")
     end
   end
 end
@@ -670,7 +566,7 @@ class U500pxFileUploader
   end
 
   def self.template_description
-    "Upload an image to 500px"
+    "Upload images to 500px"
   end
 
   def self.conn_settings_class
@@ -712,41 +608,19 @@ class U500pxFileUploader
     @ui = U500pxFileUploaderUI.new(@bridge)
     @ui.create_controls(parent_dlg)
 
-    # @ui.authorize_button.on_click { handle_authorize_button }
     @ui.send_original_radio.on_click { adjust_controls }
     @ui.send_jpeg_radio.on_click { adjust_controls }
 
-    @ui.dest_account_combo.on_sel_change {account_parameters_changed}
-#    @ui.tweet_edit.on_edit_change { adjust_tweet_length_indicator }
+    @ui.dest_account_combo.on_sel_change { account_parameters_changed }
 
     add_jpeg_controls_event_hooks
     add_image_processing_controls_event_hooks
+    add_operations_controls_event_hooks
     set_seqn_static_to_current_seqn
-#    add_default_tweet_content
 
     @last_status_txt = nil
 
     create_data_fetch_worker
-  end
-
-  def tweet_body
-#    @ui.tweet_edit.get_text
-  end
-
-  def add_default_tweet_content
-#    @ui.tweet_edit.set_text("")
-  end
-
-  # def handle_authorize_button
-  #   authenticated_protocol.launch_pincode_authorization
-  # end
-
-  def enable_authorize_button
-    # @ui.authorize_button.enable(true)
-  end
-
-  def disable_authorize_button
-    # @ui.authorize_button.enable(false)
   end
 
   def layout_controls(container)
@@ -795,7 +669,6 @@ class U500pxFileUploader
     end
   end
 
-
   def periodic_timer_callback
     return unless @ui
     @data_fetch_worker.exec_messages
@@ -821,7 +694,7 @@ class U500pxFileUploader
     end
 
     # if selection didn't take, and we have items in the list, just pick the 1st one
-    if @ui.dest_account_combo.get_selected_item.empty?  &&  @ui.dest_account_combo.num_items > 0
+    if @ui.dest_account_combo.get_selected_item.empty? &&  @ui.dest_account_combo.num_items > 0
       @ui.dest_account_combo.set_selected_item( @ui.dest_account_combo.get_item_at(0) )
     end
   end
@@ -841,14 +714,14 @@ class U500pxFileUploader
       begin
 
         prot = U500pxUploadProtocol.new(@bridge, {
-          :connection_settings_serializer => @conn_settings_ser,
-          :dialog => self
-        })
+                                          :connection_settings_serializer => @conn_settings_ser,
+                                          :dialog => self
+                                        })
 
         prot.authenticate_from_settings({
-          :token => account.auth_token,
-          :token_secret => account.auth_token_secret
-        }) if tokens_present?
+                                          :token => account.auth_token,
+                                          :token_secret => account.auth_token_secret
+                                        }) if tokens_present?
 
       rescue Exception => ex
         display_message_box "Unable to login to 500px server. Please click the Connections button.\nError: #{ex.message}"
@@ -870,21 +743,12 @@ class U500pxFileUploader
   end
 
   def account_valid?
-    (account_empty? || account_invalid?) ? false : true
-  end
-
-  def toggle_authorize_button
-    # enable  = if (account_empty? || account_valid?)
-    #   false
-    # else
-    #   true
-    # end
-    # @ui.authorize_button.enable(enable)
+    ! (account_empty? || account_invalid?)
   end
 
   def disable_ui
     # @ui.tweet_edit.enable(false)
-    # @ui.send_button.enable(false)
+    @ui.send_button.enable(false)
   end
 
   def imglink_button_spec
@@ -915,14 +779,13 @@ class U500pxFileUploader
 
   def adjust_controls
     adjust_image_processing_controls
-    toggle_authorize_button
   end
 
   def build_upload_spec(acct, ui)
     spec = AutoStruct.new
 
     # string displayed in upload progress dialog title bar:
-    spec.upload_display_name  = "500px.com:#{acct.user_name}"
+    spec.upload_display_name  = "500px.com:#{ui.dest_account_combo.get_selected_item}"
     # string used in logfile name, should have NO spaces or funky characters:
     spec.log_upload_type      = TEMPLATE_DISPLAY_NAME.tr('^A-Za-z0-9_-','')
     # account string displayed in upload log entries:
@@ -930,7 +793,6 @@ class U500pxFileUploader
 
     spec.token = authenticated_protocol.access_token
     spec.token_secret = authenticated_protocol.access_token_secret
-#    spec.tweet_body = tweet_body
 
     # FIXME: we're limiting concurrent uploads to 1 because
     #        end of queue notification happens per uploader thread
@@ -964,10 +826,11 @@ class U500pxFileUploader
     # spec.apply_stationery_pad = false
     # spec.preserve_exif = false
     # spec.save_transmitted_photos = false
-    spec.do_rename = false
     # spec.save_photos_subdir_type = 'specific'
 
     build_operations_spec(spec, ui)
+
+    spec.do_rename = false
     # build_renaming_spec(spec, ui)
 
     spec
@@ -1019,18 +882,17 @@ class U500pxFileUploader
   end
 end
 
-class U500pxPincodeVerifierDialog < Dlg::DynModalChildDialog
+class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
 
   include PM::Dlg
   include CreateControlHelper
 
-  attr_accessor :access_token, :access_token_secret, :user_name
+  attr_accessor :access_token, :access_token_secret
 
   def initialize(api_bridge, client, dialog_end_callback)
     @bridge = api_bridge
     @access_token = nil
     @access_token_secret = nil
-    @user_name = nil
     @client = client
     @dialog_end_callback = dialog_end_callback
     super()
@@ -1038,17 +900,15 @@ class U500pxPincodeVerifierDialog < Dlg::DynModalChildDialog
 
   def init_dialog
     dlg = self
-    dlg.set_window_position_key("U500pxPincodeVerifierDialogT")
+    dlg.set_window_position_key("U500pxCodeVerifierDialogT")
     dlg.set_window_position(50, 200, 300, 160)
-    title = "Verify Pincode"
+    title = "Verification code"
     dlg.set_window_title(title)
 
-    parent_dlg = dlg
-    create_control(:pincode_static,       Static,         parent_dlg, :label=>"Enter the pincode:", :align=>"left")
-    create_control(:pincode_edit,         EditControl,    parent_dlg, :value=>"", :persist=>false)
-
-    create_control(:submit_button,            Button,         parent_dlg, :label=>"Submit")
-    create_control(:cancel_button,            Button,         parent_dlg, :label=>"Cancel")
+    create_control(:code_static,   Static,      dlg, :label=>"Enter the verification code:")
+    create_control(:code_edit,     EditControl, dlg, :value=>"", :persist=>false)
+    create_control(:submit_button, Button,      dlg, :label=>"Submit")
+    create_control(:cancel_button, Button,      dlg, :label=>"Cancel")
 
     @submit_button.on_click { get_access_token }
     @cancel_button.on_click { closebox_clicked }
@@ -1059,49 +919,47 @@ class U500pxPincodeVerifierDialog < Dlg::DynModalChildDialog
   end
 
   def destroy_dialog!
-    @dialog_end_callback.call(@access_token, @access_token_secret, @user_name) if @dialog_end_callback
+    @dialog_end_callback.call(@access_token, @access_token_secret) if @dialog_end_callback
     super
   end
 
   def layout_controls
-    sh = 20
-    eh = 24
-    bh = 28
+    sh, eh = 20, 24
+
     dlg = self
     client_width, client_height = dlg.get_clientrect_size
     c = LayoutContainer.new(0, 0, client_width, client_height)
-    c.inset(16, 10, -16, -10)
+    c.inset(15, 10, -15, -10)
 
-    w1 = 250
-    c << @pincode_static.layout(0, c.base, w1, sh)
+    c << @code_static.layout(0, c.base, -1, sh)
     c.pad_down(0).mark_base
-    c << @pincode_edit.layout(0, c.base, w1, eh)
+    c << @code_edit.layout(0, c.base, -1, eh)
     c.pad_down(5).mark_base
 
     bw = 80
-    c << @submit_button.layout(-(bw*2+10), -bh, bw, bh)
-    c << @cancel_button.layout(-bw, -bh, bw, bh)
+    c << @submit_button.layout(-(2*bw+2), -eh, bw, eh)
+    c << @cancel_button.layout(-bw, -eh, bw, eh)
   end
 
   protected
 
-  def pincode_value
-    @pincode_edit.get_text.strip
+  def code_value
+    @code_edit.get_text.strip
   end
 
-  def pincode_value_empty?
-    pincode_value.empty?
+  def code_value_empty?
+    code_value.empty?
   end
 
-  def notify_pincode_value_blank
-    Dlg::MessageBox.ok("Please enter a non-blank pincode.", Dlg::MessageBox::MB_ICONEXCLAMATION)
+  def notify_code_value_blank
+    Dlg::MessageBox.ok("Please enter a non-blank code.", Dlg::MessageBox::MB_ICONEXCLAMATION)
   end
 
   def get_access_token
-    notify_pincode_value_blank and return if pincode_value_empty?
+    notify_code_value_blank and return if code_value_empty?
 
     begin
-      oauth_verifier = pincode_value
+      oauth_verifier = code_value
       result = @client.get_access_token(oauth_verifier)
       store_access_settings(result)
     rescue StandardError => ex
@@ -1112,18 +970,16 @@ class U500pxPincodeVerifierDialog < Dlg::DynModalChildDialog
   end
 
   def store_access_settings(result)
-    @access_token = result[:access_token]
-    @access_token_secret = result [:access_token_secret]
-    @user_name = result[:user_name]
+    @access_token, @access_token_secret = result
   end
 end
 
 class U500pxClient
-  BASE_URL = "https://api.500px.com/v1"
-  API_KEY = ''
-  API_SECRET = ''
+  BASE_URL = "https://api.500px.com/v1/"
+  API_KEY = 'Vai22qxgGIIsdONIVkICLHsFAlGaP52GAYF0beK6'
+  API_SECRET = '8ks0AuHKQUO2WEIxrAeBsFOMBgOHc13KdwCKRX4w'
 
-  attr_accessor :access_token, :access_token_secret, :user_name
+  attr_accessor :access_token, :access_token_secret
   attr_accessor :config
 
   def initialize(bridge, options = {})
@@ -1134,61 +990,53 @@ class U500pxClient
   def reset!
     @access_token = nil
     @access_token_secret = nil
-    @user_name = nil
   end
 
-  def to_h
-    {
-        :access_token => @access_token,
-        :access_token_secret => @access_token_secret,
-        :user_name => @user_name
-    }
-  end
-
-  def launch_pincode_authorization(callback)
+  def get_500px_authorization(callback)
     reset!
     fetch_request_token
-    launch_pincode_authorization_in_browser
-    open_pincode_entry_dialog(callback)
+    launch_500px_authorization_in_browser
+    open_500px_entry_dialog(callback)
   end
 
   def fetch_request_token
-    response = post('v1/oauth/request_token')
+    response = post('oauth/request_token')
 
     result = CGI::parse(response.body)
-
+    
     @access_token = result['oauth_token']
     @access_token_secret = result['oauth_token_secret']
     @access_token
   end
 
-  def launch_pincode_authorization_in_browser
+  def launch_500px_authorization_in_browser
     fetch_request_token unless @access_token
-    pincode_url = "https://api.500px.com/v1/oauth/authorize?oauth_token=#{@access_token}"
-    @bridge.launch_url(pincode_url)
+    authorization_url = "https://api.500px.com/v1/oauth/authorize?oauth_token=#{@access_token}"
+    @bridge.launch_url(authorization_url)
   end
 
-  def open_pincode_entry_dialog(callback)
-    callback_a = lambda do |token, token_secret, user_name|
-      store_settings_data(token, token_secret, user_name)
+  def open_500px_entry_dialog(callback)
+    callback_a = lambda do |token, token_secret|
+      store_settings_data(token, token_secret)
       callback.call(self)
       # update_ui
     end
-    cdlg = U500pxPincodeVerifierDialog.new(@bridge, self, callback_a)
+    cdlg = U500pxCodeVerifierDialog.new(@bridge, self, callback_a)
     cdlg.instantiate!
     cdlg.request_deferred_modal
   end
 
   def get_access_token(verifier)
     @verifier = verifier
-    response = post('v1/oauth/access_token')
-    result = CGI::parse(response.body)
-
+    response = post('oauth/access_token')
+    result = CGI::parse(response.body)  
     @access_token = result['oauth_token']
     @access_token_secret = result['oauth_token_secret']
-    @user_name = result['screen_name']
 
-    to_h
+    dbgprint "Got access token: TOKEN=#{result['oauth_token'].to_s} SECRET=#{result['oauth_token_secret'].to_s}"
+    raise "Unable to verify code" unless authenticated?
+
+    [ @access_token, @access_token_secret ]
   end
 
   def authenticate_from_settings(settings = {})
@@ -1201,14 +1049,12 @@ class U500pxClient
   end
 
   def authenticated?
-    @authenticated
+    !(@access_token.nil? || @access_token.empty? || @access_token_secret.nil? || @access_token_secret.empty?)
   end
 
-  def store_settings_data(token, token_secret, user_name)
+  def store_settings_data(token, token_secret)
     @access_token = token
     @access_token_secret = token_secret
-    @user_name = user_name
-    @authenticated = true
   end
 
   def get_rate_status
@@ -1253,12 +1099,12 @@ class U500pxClient
 
   def credentials
     {
-        :consumer_key    => API_KEY,
-        :consumer_secret => API_SECRET,
-        :token           => @access_token,
-        :token_secret    => @access_token_secret,
-        :verifier => @verifier,
-        :callback => 'oob'
+      :consumer_key    => API_KEY,
+      :consumer_secret => API_SECRET,
+      :token           => @access_token,
+      :token_secret    => @access_token_secret,
+      :verifier        => @verifier,
+      :callback        => 'http://www.hayobaan.nl/codeverifier.php'
     }
   end
 
@@ -1310,11 +1156,11 @@ end
 
 class U500pxUploadProtocol
 
-  BASE_URL = "https://api.twitter.com/"
-  API_KEY = 'n4ymCL7XJjI6d3FnfvRNwUv1X'
-  API_SECRET = '9lEB25A6LZGBKK5MY7ZW494jOC0bW0cpxmOjxW4ZTlutLY5YTg'
+  BASE_URL = "https://api.500px.com/v1/"
+  API_KEY = 'Vai22qxgGIIsdONIVkICLHsFAlGaP52GAYF0beK6'
+  API_SECRET = '8ks0AuHKQUO2WEIxrAeBsFOMBgOHc13KdwCKRX4w'
 
-  attr_reader :access_token, :access_token_secret, :user_name
+  attr_reader :access_token, :access_token_secret
   attr_accessor :config
 
   def initialize(pm_api_bridge, options = {:connection_settings_serializer => nil, :dialog => nil})
@@ -1351,9 +1197,8 @@ class U500pxUploadProtocol
 
     @access_token = spec.token
     @access_token_secret = spec.token_secret
-    tweet_body = spec.tweet_body
 
-    upload(local_filepath, remote_filename, tweet_body)
+    upload(local_filepath, remote_filename)
 
     @shared.mutex.synchronize {
       dat = (@shared[spec.upload_queue_key] ||= {})
@@ -1397,11 +1242,10 @@ class U500pxUploadProtocol
     (h = @http) and h.abort_transfer
   end
 
-  def upload(fname, remote_filename, tweet_body)
+  def upload(fname, remote_filename)
     fcontents = @bridge.read_file_for_upload(fname)
 
     mime = MimeMultipart.new
-    mime.add_field("status", tweet_body)
     mime.add_field("source", '<a href="http://store.camerabits.com">Photo Mechanic 5</a>')
     mime.add_field("include_entities", "true")
     mime.add_image("media[]", remote_filename, fcontents, "application/octet-stream")
@@ -1449,7 +1293,7 @@ class U500pxUploadProtocol
   protected
 
   def request_headers(method, url, params = {}, signature_params = params)
-   {'Authorization' => auth_header(method, url, params, signature_params)}
+    {'Authorization' => auth_header(method, url, params, signature_params)}
   end
 
   def auth_header(method, url, params = {}, signature_params = params)
@@ -1468,7 +1312,7 @@ class U500pxUploadProtocol
       :token           => @access_token,
       :token_secret    => @access_token_secret,
       :verifier => @verifier,
-      :callback => 'oob'
+      :callback => 'http://www.hayobaan.nl/codeverifier.php'
     }
   end
 
@@ -1530,10 +1374,10 @@ class U500pxConfiguration
       max_images = response_body['max_media_per_upload']
 
       new({
-        :image_size_limit => image_size_limit,
-        :link_char_count => link_char_count,
-        :max_images => max_images
-      })
+            :image_size_limit => image_size_limit,
+            :link_char_count => link_char_count,
+            :max_images => max_images
+          })
     end
   end
 
