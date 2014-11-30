@@ -24,11 +24,9 @@ class U500pxConnectionSettingsUI
     dlg = parent_dlg
     create_control(:setting_name_static,      Static,       dlg, :label=>"Your Accounts:")
     create_control(:setting_name_combo,       ComboBox,     dlg, :editable=>false, :sorted=>true, :persist=>false)
-    create_control(:setting_delete_btn,       Button,       dlg, :label=>"Delete")
-    create_control(:add_account_instructions, Static,       dlg, :label=>"Note: If you have an active 500px session in your browser, 500px will authorize Photo Mechanic for the username associated with that session. Otherwise, 500px will prompt you to login.")
-    create_control(:add_account_name_static,  Static,       dlg, :label=>"Account name:")
-    create_control(:add_account_name_edit,    EditControl,  dlg, :value=>"", :persist=>false)
-    create_control(:add_account_button,       Button,       dlg, :label=>"Add Account")
+    create_control(:setting_delete_button,    Button,       dlg, :label=>"Delete Account")
+    create_control(:setting_add_button,       Button,       dlg, :label=>"Add/Replace Account")
+    create_control(:add_account_instructions, Static,       dlg, :label=>"Note on ading an account: If you have an active 500px session in your browser, 500px will authorize Photo Mechanic for the username associated with that session. Otherwise, 500px will prompt you to login.\nAfter authorizing Photo Mechanic, please enter the verification code into the dialog. The account name will be determined automatically from your 500px user name.")
   end
 
   def layout_controls(container)
@@ -37,18 +35,12 @@ class U500pxConnectionSettingsUI
     c.set_prev_right_pad(5).inset(10,10,-10,-10).mark_base
     c << @setting_name_static.layout(0, c.base, -1, sh)
     c.pad_down(0).mark_base
-    c << @setting_name_combo.layout(0, c.base, -150, eh)
-    c << @setting_delete_btn.layout(-140, c.base, -80, eh)
-    c.pad_down(0).mark_base
-    c.set_prev_right_pad(5).inset(10,30,-10,-10).mark_base
-    c << add_account_instructions.layout(0, c.base, -1, 3*sh)
-    c.pad_down(0).mark_base
-    c.set_prev_right_pad(5).inset(10,30,-10,-10).mark_base
-    c << @add_account_name_static.layout(0, c.base, 200, sh)
-    c.pad_down(0).mark_base
-    c << @add_account_name_edit.layout(0, c.base, -150, eh)
-    c << @add_account_button.layout(-140, c.base, -80, eh)
-    c.pad_down(0).mark_base
+    c << @setting_name_combo.layout(0, c.base, -5, eh)
+    c.pad_down(5).mark_base
+    c << @setting_delete_button.layout(0, c.base, "50%-5", eh)
+    c << @setting_add_button.layout("-50%+5", c.base, -5, eh)
+    c.pad_down(5).mark_base
+    c << add_account_instructions.layout(0, c.base, -1, 4*sh)
   end
 end
 
@@ -132,8 +124,8 @@ class U500pxConnectionSettings
 
   def add_event_handlers
     @ui.setting_name_combo.on_sel_change { handle_sel_change }
-    @ui.add_account_button.on_click { handle_add_account }
-    @ui.setting_delete_btn.on_click { handle_delete_button }
+    @ui.setting_delete_button.on_click { handle_delete_button }
+    @ui.setting_add_button.on_click { handle_add_account }
   end
 
   def layout_controls(container)
@@ -211,6 +203,7 @@ class U500pxConnectionSettings
   def add_account_to_dropdown(name = nil)
     save_current_values_to_settings(:name => name.to_s, :replace=>true)
     @ui.setting_name_combo.add_item(name.to_s)
+    @ui.setting_name_combo.set_selected_item(name.to_s)
   end
 
   def handle_sel_change
@@ -232,18 +225,10 @@ class U500pxConnectionSettings
   end
 
   def handle_add_account
-    key = @ui.add_account_name_edit.get_text
-    if key.to_s.empty?
-      Dlg::MessageBox.ok("Please enter an account name", Dlg::MessageBox::MB_ICONEXCLAMATION)
-      return
-    end
-    if @settings[key]
-      return unless Dlg::MessageBox.ok_cancel?("Account #{key} already exist, Ok to overwrite?", Dlg::MessageBox::MB_ICONEXCLAMATION)
-    end
     save_account_callback = lambda do |client|
       if client.authenticated?
-        @settings[key]  = SettingsData.new(key, client.access_token,client.access_token_secret)
-        add_account_to_dropdown(key)
+        @settings[client.name]  = SettingsData.new(client.name, client.access_token,client.access_token_secret)
+        add_account_to_dropdown(client.name)
       end
     end
     client.get_500px_authorization(save_account_callback)
@@ -435,7 +420,7 @@ class U500pxFileUploaderUI
       c.mark_base.size_to_base
     end
     
-    container.layout_with_contents(@meta_right_group_box, "50%+5", container.base, "50%-5", -1) do |c|
+    container.layout_with_contents(@meta_right_group_box, "-50%+5", container.base, -5, -1) do |c|
       c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
 
       # Not sure why this one is neceassary to line up left and right...
@@ -939,12 +924,13 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
   include PM::Dlg
   include CreateControlHelper
 
-  attr_accessor :access_token, :access_token_secret
+  attr_accessor :access_token, :access_token_secret, :name
 
   def initialize(api_bridge, client, dialog_end_callback)
     @bridge = api_bridge
     @access_token = nil
     @access_token_secret = nil
+    @name = "Unknown"
     @client = client
     @dialog_end_callback = dialog_end_callback
     super()
@@ -971,7 +957,7 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
   end
 
   def destroy_dialog!
-    @dialog_end_callback.call(@access_token, @access_token_secret) if @dialog_end_callback
+    @dialog_end_callback.call(@access_token, @access_token_secret, @name) if @dialog_end_callback
     super
   end
 
@@ -1022,7 +1008,7 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
   end
 
   def store_access_settings(result)
-    @access_token, @access_token_secret = result
+    @access_token, @access_token_secret, @name = result
   end
 end
 
@@ -1031,7 +1017,7 @@ class U500pxClient
   API_KEY = 'Vai22qxgGIIsdONIVkICLHsFAlGaP52GAYF0beK6'
   API_SECRET = '8ks0AuHKQUO2WEIxrAeBsFOMBgOHc13KdwCKRX4w'
 
-  attr_accessor :access_token, :access_token_secret
+  attr_accessor :access_token, :access_token_secret, :name
   attr_accessor :config
 
   def initialize(bridge, options = {})
@@ -1042,6 +1028,7 @@ class U500pxClient
   def reset!
     @access_token = nil
     @access_token_secret = nil
+    @name = nil
   end
 
   def get_500px_authorization(callback)
@@ -1068,8 +1055,8 @@ class U500pxClient
   end
 
   def open_500px_entry_dialog(callback)
-    callback_a = lambda do |token, token_secret|
-      store_settings_data(token, token_secret)
+    callback_a = lambda do |token, token_secret, name|
+      store_settings_data(token, token_secret, name)
       callback.call(self)
       # update_ui
     end
@@ -1088,12 +1075,24 @@ class U500pxClient
     dbgprint "Got access token: TOKEN=#{result['oauth_token'].to_s} SECRET=#{result['oauth_token_secret'].to_s}"
     raise "Unable to verify code" unless authenticated?
 
-    [ @access_token, @access_token_secret ]
+    # Now we get the name from the user record on 500px
+    @verifier = nil
+    response = get('users')
+    dbgprint "USERSRES=#{response}"
+    dbgprint "USERSBODY=#{response.body}"
+    require_server_success_response(response)
+    response_body = JSON.parse(response.body)
+    @name = "#{response_body['user']['username']} (#{response_body['user']['fullname']})"
+    dbgprint "Found NAME=#{@name}"
+    @verifier = verifier
+    
+    [ @access_token, @access_token_secret, @name ]
   end
 
   def authenticate_from_settings(settings = {})
     @access_token = settings[:token]
     @access_token_secret = settings[:token_secret]
+    @name = settings[:name]
   end
 
   def update_ui
@@ -1104,9 +1103,10 @@ class U500pxClient
     !(@access_token.nil? || @access_token.empty? || @access_token_secret.nil? || @access_token_secret.empty?)
   end
 
-  def store_settings_data(token, token_secret)
+  def store_settings_data(token, token_secret, name)
     @access_token = token
     @access_token_secret = token_secret
+    @name = name
   end
 
   protected
