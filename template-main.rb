@@ -329,49 +329,59 @@ class U500pxFileUploaderUI
                      "27 - Urban Exploration",
                      "25 - Wedding"
                    ], :selected=>"00 - Uncategorized", :sorted=>false, :persist=>true)
-    create_control(:meta_privacy_check,        CheckBox,    dlg, :label=>"Privacy")  
-    create_control(:meta_license_static,       Static,      dlg, :label=>"License")
-    create_control(:meta_license_combo,        ComboBox,    dlg, :items=>[
-                     "00 - Standard 500px License",
-                     "01 - Creative Commons License Non Commercial Attribution",
-                     "02 - Creative Commons License Non Commercial No Derivatives",
-                     "03 - Creative Commons License Non Commercial Share Alike",
-                     "04 - Creative Commons License Attribution",
-                     "05 - Creative Commons License No Derivatives",
-                     "06 - Creative Commons License Share Alike"
+    create_control(:meta_nsfw_check,           CheckBox,    dlg, :label=>"NotSafeForWork")
+    create_control(:meta_license_type_static,  Static,      dlg, :label=>"License")
+    create_control(:meta_license_type_combo,   ComboBox,    dlg, :items=>[
+                     "00 - 500px License",
+                     "04 - Attribution 3.0",
+                     "05 - Attribution-NoDerivs 3.0",
+                     "06 - Attribution-ShareAlike 3.0",
+                     "01 - Attribution-NonCommercial 3.0",
+                     "02 - Attribution-NonCommercial-NoDerivs 3.0",
+                     "03 - Attribution-NonCommercial-ShareAlike 3.0"
+                     # Names in api documentation:
+                     # "00 - Standard 500px License",
+                     # "04 - Creative Commons License Attribution",
+                     # "05 - Creative Commons License No Derivatives",
+                     # "06 - Creative Commons License Share Alike",
+                     # "01 - Creative Commons License Non Commercial Attribution",
+                     # "02 - Creative Commons License Non Commercial No Derivatives",
+                     # "03 - Creative Commons License Non Commercial Share Alike"
                    ], :selected=>"00 - Standard 500px License", :sorted=>false, :persist=>true)
-    create_control(:meta_title_static,         Static,      dlg, :label=>"Title")
-    create_control(:meta_title_edit,           EditControl, dlg, :value=>"{headine}", :multiline=>true)
+    create_control(:meta_privacy_check,        CheckBox,    dlg, :label=>"Privacy")
+    create_control(:meta_name_static,          Static,      dlg, :label=>"Name")
+    create_control(:meta_name_edit,            EditControl, dlg, :value=>"{headline}", :multiline=>true)
     create_control(:meta_description_static,   Static,      dlg, :label=>"Description")
     create_control(:meta_description_edit,     EditControl, dlg, :value=>"{caption}", :multiline=>true)
     create_control(:meta_tags_static,          Static,      dlg, :label=>"Tags")
     create_control(:meta_tags_edit,            EditControl, dlg, :value=>"{keywords}", :multiline=>true)
 
     create_control(:meta_right_group_box,      GroupBox,    dlg, :label=>"500px Metadata:")
-    create_control(:exif_camera_static,        Static,      dlg, :label=>"Camera")
-    create_control(:exif_camera_edit,          EditControl, dlg, :value=>"{camera}", :multiline=>false)
-    create_control(:exif_lens_static,          Static,      dlg, :label=>"Lens")
-    create_control(:exif_lens_edit,            EditControl, dlg, :value=>"{lenstype}", :multiline=>false)
-    create_control(:exif_focal_static,         Static,      dlg, :label=>"Focal length")
-    create_control(:exif_focal_edit,           EditControl, dlg, :value=>"{lens}", :multiline=>false)
-    create_control(:exif_shutter_static,       Static,      dlg, :label=>"Shutter")
-    create_control(:exif_shutter_edit,         EditControl, dlg, :value=>"{shutter}", :multiline=>false)
-    create_control(:exif_aperture_static,      Static,      dlg, :label=>"Aperture")
-    create_control(:exif_aperture_edit,        EditControl, dlg, :value=>"{aperture}", :multiline=>false)
-    create_control(:exif_iso_static,           Static,      dlg, :label=>"ISO")
-    create_control(:exif_iso_edit,             EditControl, dlg, :value=>"{iso}", :multiline=>false)
-    create_control(:exif_date_static,          Static,      dlg, :label=>"Taken")
-    create_control(:exif_date_edit,            EditControl, dlg, :value=>"{datetime}", :multiline=>false)
-    create_control(:loc_lat_static,            Static,      dlg, :label=>"Latitude")
-    create_control(:loc_lat_edit,              EditControl, dlg, :value=>"{latitude}", :multiline=>false)
-    create_control(:loc_long_static,           Static,      dlg, :label=>"Longitude")
-    create_control(:loc_long_edit,             EditControl, dlg, :value=>"{longitude}", :multiline=>false)
+    create_control(:meta_camera_static,        Static,      dlg, :label=>"Camera")
+    create_control(:meta_camera_edit,          EditControl, dlg, :value=>"{model}", :multiline=>false)
+    create_control(:meta_lens_static,          Static,      dlg, :label=>"Lens")
+    create_control(:meta_lens_edit,            EditControl, dlg, :value=>"{lenstype}", :multiline=>false)
+    create_control(:meta_focal_length_static,  Static,      dlg, :label=>"Focal length")
+    create_control(:meta_focal_length_edit,    EditControl, dlg, :value=>"{lens}", :multiline=>false)
+    create_control(:meta_aperture_static,      Static,      dlg, :label=>"Aperture")
+    create_control(:meta_aperture_edit,        EditControl, dlg, :value=>"{aperture}", :multiline=>false)
+    create_control(:meta_shutter_speed_static, Static,      dlg, :label=>"Shutter")
+    create_control(:meta_shutter_speed_edit,   EditControl, dlg, :value=>"{shutter}", :multiline=>false)
+    create_control(:meta_iso_static,           Static,      dlg, :label=>"ISO")
+    create_control(:meta_iso_edit,             EditControl, dlg, :value=>"{iso}", :multiline=>false)
+    # Currently, the 500px api doesn't allow setting "taken at" :-(
+    # create_control(:meta_taken_at_static,      Static,      dlg, :label=>"Taken at")
+    # create_control(:meta_taken_at_edit,        EditControl, dlg, :value=>"{day0}/{month0}/{year4} {time}", :multiline=>false)
+    create_control(:meta_latitude_static,      Static,      dlg, :label=>"Latitude")
+    create_control(:meta_latitude_edit,        EditControl, dlg, :value=>"{latitude}", :multiline=>false)
+    create_control(:meta_longitude_static,     Static,      dlg, :label=>"Longitude")
+    create_control(:meta_longitude_edit,       EditControl, dlg, :value=>"{longitude}", :multiline=>false)
   
-    create_control(:transmit_group_box,        GroupBox,       dlg, :label=>"Transmit:")
-    create_control(:send_original_radio,       RadioButton,    dlg, :label=>"Original Photos", :checked=>true)
-    create_control(:send_jpeg_radio,           RadioButton,    dlg, :label=>"Saved as JPEG")
+    create_control(:transmit_group_box,        GroupBox,    dlg, :label=>"Transmit:")
+    create_control(:send_original_radio,       RadioButton, dlg, :label=>"Original Photos")
+    create_control(:send_jpeg_radio,           RadioButton, dlg, :label=>"Saved as JPEG", :checked=>true)
     RadioButton.set_exclusion_group(@send_original_radio, @send_jpeg_radio)
-    create_control(:send_desc_edit,            EditControl,    dlg, :value=>"Note: 500px's supported image formats are PNG, JPG and GIF.", :multiline=>true, :readonly=>true, :persist=>false)
+    create_control(:send_desc_edit,            EditControl, dlg, :value=>"Note: 500px's supported image formats are PNG, JPG and GIF.", :multiline=>true, :readonly=>true, :persist=>false)
     create_jpeg_controls(dlg)
     create_image_processing_controls(dlg)
     create_operations_controls(dlg)
@@ -398,46 +408,67 @@ class U500pxFileUploaderUI
       c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
       
       c << @meta_category_static.layout(0, c.base+3, 80, sh)
-      c << @meta_category_combo.layout(c.prev_right, c.base, 200, eh)
-      c << @meta_privacy_check.layout(c.prev_right+15, c.base, 80, sh)
-      
-      c << @meta_license_static.layout(0, c.base+eh+5+3, 80, sh)
-      c << @meta_license_combo.layout(c.prev_right, c.base+eh+5, 200, eh)
-
-      c << @meta_title_static.layout(0, c.base+2*(eh+5), 80, sh)
-      c << @meta_title_edit.layout(c.prev_right, c.base+2*(eh+5), -5, eh*2)
-      c << @meta_description_static.layout(0, c.base+4*(eh+5), 80, sh)
-      c << @meta_description_edit.layout(c.prev_right, c.base+4*(eh+5), -5, eh*2)
-      c << @meta_tags_static.layout(0, c.base+6*(eh+5), 80, sh)
-      c << @meta_tags_edit.layout(c.prev_right, c.base+6*(eh+5), -5, eh*2)
-
+      c << @meta_category_combo.layout(c.prev_right, c.base, 185, eh)
+      c << @meta_nsfw_check.layout(c.prev_right+10, c.base, -5, sh)
       c.pad_down(5).mark_base
+     
+      c << @meta_license_type_static.layout(0, c.base+3, 80, sh)
+      c << @meta_license_type_combo.layout(c.prev_right, c.base, 185, eh)
+      c << @meta_privacy_check.layout(c.prev_right+10, c.base, -5, sh)
+      c.pad_down(5).mark_base
+
+      # Not sure why this one is neceassary to line up left and right...
+      c.pad_down(1).mark_base
+
+      c << @meta_name_static.layout(0, c.base, 80, sh)
+      c << @meta_name_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c.pad_down(9).mark_base
+      
+      c << @meta_description_static.layout(0, c.base, 80, sh)
+      c << @meta_description_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c.pad_down(9).mark_base
+      
+      c << @meta_tags_static.layout(0, c.base, 80, sh)
+      c << @meta_tags_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c.pad_down(9).mark_base
+
       c.mark_base.size_to_base
     end
     
-    container.layout_with_contents(@meta_right_group_box, "50%+5", container.base, -1, -1) do |c|
+    container.layout_with_contents(@meta_right_group_box, "50%+5", container.base, "50%-5", -1) do |c|
       c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
-      
-      c << @exif_camera_static.layout(0, c.base, 80, sh)
-      c << @exif_camera_edit.layout(c.prev_right, c.base, -5, eh)
-      c << @exif_lens_static.layout(0, c.base+eh+5, 80, sh)
-      c << @exif_lens_edit.layout(c.prev_right, c.base+eh+5, -5, eh)
-      c << @exif_focal_static.layout(0, c.base+2*(eh+5), 80, sh)
-      c << @exif_focal_edit.layout(c.prev_right, c.base+2*(eh+5), -5, eh)
-      c << @exif_aperture_static.layout(0, c.base+3*(eh+5), 80, sh)
-      c << @exif_aperture_edit.layout(c.prev_right, c.base+3*(eh+5), -5, eh)
-      c << @exif_shutter_static.layout(0, c.base+4*(eh+5), 80, sh)
-      c << @exif_shutter_edit.layout(c.prev_right, c.base+4*(eh+5), -5, eh)
-      c << @exif_iso_static.layout(0, c.base+5*(eh+5), 80, sh)
-      c << @exif_iso_edit.layout(c.prev_right, c.base+5*(eh+5), -5, eh)
-      c << @exif_date_static.layout(0, c.base+6*(eh+5), 80, sh)
-      c << @exif_date_edit.layout(c.prev_right, c.base+6*(eh+5), -5, eh)
-      c << @loc_lat_static.layout(0, c.base+7*(eh+5), 80, sh)
-      c << @loc_lat_edit.layout(c.prev_right, c.base+7*(eh+5), -5, sh)
-      c << @loc_long_static.layout(0, c.base+8*(eh+5), 80, sh)
-      c << @loc_long_edit.layout(c.prev_right, c.base+8*(eh+5), -5, sh)
 
+      # Not sure why this one is neceassary to line up left and right...
+      c.pad_down(1).mark_base
+
+      c << @meta_camera_static.layout(0, c.base, 80, sh)
+      c << @meta_camera_edit.layout(c.prev_right, c.base, -5, eh)
       c.pad_down(5).mark_base
+      c << @meta_lens_static.layout(0, c.base, 80, sh)
+      c << @meta_lens_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @meta_focal_length_static.layout(0, c.base, 80, sh)
+      c << @meta_focal_length_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @meta_aperture_static.layout(0, c.base, 80, sh)
+      c << @meta_aperture_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @meta_shutter_speed_static.layout(0, c.base, 80, sh)
+      c << @meta_shutter_speed_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @meta_iso_static.layout(0, c.base, 80, sh)
+      c << @meta_iso_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      # c << @meta_taken_at_static.layout(0, c.base, 80, sh)
+      # c << @meta_taken_at_edit.layout(c.prev_right, c.base, -5, eh)
+      # c.pad_down(5).mark_base
+      c << @meta_latitude_static.layout(0, c.base, 80, sh)
+      c << @meta_latitude_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+      c << @meta_longitude_static.layout(0, c.base, 80, sh)
+      c << @meta_longitude_edit.layout(c.prev_right, c.base, -5, eh)
+      c.pad_down(5).mark_base
+
       c.mark_base.size_to_base
     end
 
@@ -516,34 +547,29 @@ class U500pxBackgroundDataFetchWorker
     @client = U500pxClient.new(@bridge)
   end
 
-  def account
-    @dlg.account
-  end
+  # Do we need these two???
+  #  def account
+  #    @dlg.account
+  #  end
 
-  def configuration
-  end
+  #  def configuration
+  #  end
 
   def do_task
     return unless @dlg.account_parameters_dirty
-
-    @dlg.reset_active_account
-    check_status if @dlg.account_valid?
-    @dlg.account_parameters_dirty = false
-
-  rescue => e
-    @dlg.set_status_text "Error communicating with 500px: #{e}"
-  end
-
-  def check_status
-    @dlg.set_status_text("Checking connection status...")
-    status = @client.get_configuration
-
-    if status.class === Hash && status['errors']
-      @dlg.set_status_text(status['errors'].first['message'])
+    success = false
+    acct = @dlg.current_account_settings
+    if acct.nil?
+      @dlg.set_status_text("Please select an account, or create one with the Connections button.")
+    elsif ! acct.appears_valid?
+      @dlg.set_status_text("Some account settings appear invalid or missing. Please click the Connections button.")
     else
       @dlg.set_status_text("You are logged in and ready to upload your images.")
     end
+    @dlg.account_parameters_dirty = false
   end
+
+
 end
 
 class U500pxFileUploader
@@ -588,6 +614,10 @@ class U500pxFileUploader
     acct = current_account_settings
     raise "Failed to load settings for current account. Please click the Connections button." unless acct
     spec = build_upload_spec(acct, @ui)
+
+    # Expand metadata specification strings as set in the gui per image
+    build_imagemetadata_spec(spec, ui)
+
     @bridge.kickoff_template_upload(spec, U500pxUploadProtocol)
   end
 
@@ -791,6 +821,7 @@ class U500pxFileUploader
     # account string displayed in upload log entries:
     spec.log_upload_acct      = spec.upload_display_name
 
+    # Token and secret
     spec.token = authenticated_protocol.access_token
     spec.token_secret = authenticated_protocol.access_token_secret
 
@@ -808,10 +839,6 @@ class U500pxFileUploader
     #       Rule of thumb: If file A requires a different
     #       login than file B, they should have different
     #       queue keys.
-    #       IMPORTANT: Since 500px end-of-queue upload job
-    #       applies to a given galery, we require that uploads to
-    #       differing galleries be separated into their own queues.
-    #       Thus, we make gallery part of the queue key.
     spec.upload_queue_key = [
       "500px"
     ].join("\t")
@@ -836,6 +863,31 @@ class U500pxFileUploader
     spec
   end
 
+  def build_imagemetadata_spec(spec, ui)
+    metadata = {
+      "category" => @ui.meta_category_combo.get_selected_item.to_i.to_s,
+      "nsfw" => @ui.meta_nsfw_check.checked? ? "1" : "0",
+      "license_type" => @ui.meta_license_type_combo.get_selected_item.to_i.to_s,
+      "privacy" => @ui.meta_privacy_check.checked? ? "1" : "0"
+    }
+    # taken_at not allowed by 
+    [ "name", "description", "shutter_speed", "focal_length", "aperture", "iso", "camera", "lens", "latitude", "longitude", "tags" ].each do |item|
+      itemvalue = eval "@ui.meta_#{item}_edit.get_text"
+      metadata[item] = itemvalue
+    end
+    spec.metadata = []
+    @num_files.times do |i|
+      fname = @bridge.expand_vars("{folderpath}{filename}", i+1)
+      dbgprint "Building spec for image #{i+1} of #{@num_files}: #{fname}"
+      spec.metadata[i] = {}
+      metadata.each_pair do |item, value|
+        interpreted_value = @bridge.expand_vars(value, i+1)
+        dbgprint "#{i+1} => #{item} = #{interpreted_value}"
+        spec.metadata[i][item] = interpreted_value
+      end
+    end
+  end
+  
   def fetch_conn_settings_data
     U500pxConnectionSettings.fetch_settings_data(@conn_settings_ser)
   end
@@ -1057,31 +1109,6 @@ class U500pxClient
     @access_token_secret = token_secret
   end
 
-  def get_rate_status
-    response = get('1.1/application/rate_limit_status.json')
-    response_body = JSON.parse(response.body)
-  end
-
-  def get_configuration
-    unless @config
-      response = get('1.1/help/configuration.json')
-      response_body = JSON.parse(response.body)
-      config = U500pxConfiguration.from_response(response_body)
-
-
-      @config ||= config
-    end
-  end
-
-  def verify_credentials
-    response = get('1.1/account/verify_credentials.json')
-    JSON.parse(response.body)
-  end
-
-  def post_tweet(data, headers)
-    response = post('1.1/statuses/update_with_media.json', data, headers)
-  end
-
   protected
 
   def request_headers(method, url, params = {}, signature_params = params)
@@ -1155,7 +1182,6 @@ class U500pxClient
 end
 
 class U500pxUploadProtocol
-
   BASE_URL = "https://api.500px.com/v1/"
   API_KEY = 'Vai22qxgGIIsdONIVkICLHsFAlGaP52GAYF0beK6'
   API_SECRET = '8ks0AuHKQUO2WEIxrAeBsFOMBgOHc13KdwCKRX4w'
@@ -1172,6 +1198,7 @@ class U500pxUploadProtocol
     @dialog = options[:dialog]
     @connection_settings_serializer = options[:connection_settings_serializer]
     @config = nil
+    @uploadnr = 0
     mute_transfer_status
     close
   end
@@ -1198,7 +1225,7 @@ class U500pxUploadProtocol
     @access_token = spec.token
     @access_token_secret = spec.token_secret
 
-    upload(local_filepath, remote_filename)
+    upload(local_filepath, remote_filename, spec)
 
     @shared.mutex.synchronize {
       dat = (@shared[spec.upload_queue_key] ||= {})
@@ -1210,19 +1237,13 @@ class U500pxUploadProtocol
   end
 
   def transfer_queue_empty(spec)
-    job_url = nil
     @shared.mutex.synchronize {
       dat = (@shared[spec.upload_queue_key] ||= {})
 
       if dat[:pending_uploadjob].to_i > 0
-        job_url = dat[:uploadjob_url]
         dat[:pending_uploadjob] = 0
       end
     }
-
-    if job_url
-      uploadjob(job_url)
-    end
   end
 
   def reset_transfer_status
@@ -1242,52 +1263,66 @@ class U500pxUploadProtocol
     (h = @http) and h.abort_transfer
   end
 
-  def upload(fname, remote_filename)
-    fcontents = @bridge.read_file_for_upload(fname)
+  def create_query_string( query_hash = {} )
+    qstr = ""
+    query_hash.each_pair do |key, value|
+      qstr += (qstr.empty? ? "?" : "&")
+      qstr += "#{key}=" + URI.escape(value.to_s)
+    end
+    qstr
+  end
 
-    mime = MimeMultipart.new
-    mime.add_field("source", '<a href="http://store.camerabits.com">Photo Mechanic 5</a>')
-    mime.add_field("include_entities", "true")
-    mime.add_image("media[]", remote_filename, fcontents, "application/octet-stream")
-
-    data, headers = mime.generate_data_and_headers
+  def upload(fname, remote_filename, spec)
+    dbgprint "Upload Job: #{@uploadnr}"
+    raise "Can't do" if @uploadnr >= spec.num_files
+    metadata_qstr = create_query_string(spec.metadata[@uploadnr])
+    dbgprint "METASTR=#{metadata_qstr}"
+    @uploadnr += 1
+    # FIXME the reset should actually occur when a new object is initialised
+    # or otherwise at the beginning of an upload, somehow this doesn't work???
+    # I even tried using a class variable @@uploadnr, but even that seemed to stay
+    # at the original value since last run
+    @uploadnr = 0 if @uploadnr >= spec.num_files
 
     begin
       @mute_transfer_status = false
-      verify_credentials
-      resp = post_tweet(data, headers)
-      require_server_success_response(resp)
+      # Post photos 500px api call to get upload_key & photo_id
+      response = post('photos' + metadata_qstr)
+      dbgprint "RESP1=#{response}"
+      dbgprint "BODY1=#{response.body}"
+      require_server_success_response(response)
+      response_body = JSON.parse(response.body)
+      upload_qstr = create_query_string(
+        { "upload_key" => response_body["upload_key"],
+          "photo_id" => response_body["photo"]["id"],
+          "consumer_key" => API_KEY,
+          "access_key" => spec.token
+        })
+      dbgprint "UPLOADSTR=" + upload_qstr
+      
+      # Upload image to 500px
+      fcontents = @bridge.read_file_for_upload(fname)
+      mime = MimeMultipart.new
+      mime.add_image("file", remote_filename, fcontents, "application/octet-stream")
+      data, headers = mime.generate_data_and_headers
+      # Note: this goes to domain upload.500px.com instead of the normal api.500px.com!
+      url = 'https://upload.500px.com/v1/upload' + upload_qstr
+      uri = URI.parse(url)
+      ensure_open_http(uri.host, uri.port)
+      response = @http.send(:post, uri.request_uri, data, headers)
+      dbgprint "RESP2=#{response}"
+      dbgprint "BODY2=#{response.body}"
+      require_server_success_response(response)
+      
     ensure
       @mute_transfer_status = true
     end
-  end
-
-  def generate_photo_id(filename)
-    Digest::SHA1.hexdigest "#{Time.now.to_s}-#{filename}"
-  end
-
-  def uploadjob(order)
-    xmlquery = "<uploadjob>\n"
-    xmlquery += "<order uri=\"#{order}\"\/>\n"
-    xmlquery += "<settings />\n"
-    xmlquery += "</uploadjob>\n"
-    headers = { 'Content-Type' => 'application/xml', 'Cookie' => @api_key}
-    resp = post("uploadjobs", xmlquery, headers)
-    sleep 5.0  # FIXME: KLUDGE: grr... we wouldn't want to return and find a new file added to the queue and immediately upload it while the job is still processing... not sure how to wait the correct length of time
+    return
   end
 
   def authenticate_from_settings(settings = {})
     @access_token = settings[:token]
     @access_token_secret = settings[:token_secret]
-  end
-
-  def verify_credentials
-    response = get('1.1/account/verify_credentials.json')
-    JSON.parse(response.body)
-  end
-  #
-  def post_tweet(data, headers)
-    response = post('1.1/statuses/update_with_media.json', data, headers)
   end
 
   protected
