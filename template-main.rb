@@ -32,13 +32,13 @@ class U500pxConnectionSettingsUI
   def layout_controls(container)
     sh, eh = 20, 24
     c = container
-    c.set_prev_right_pad(5).inset(10,10,-10,-10).mark_base
+    c.set_prev_right_pad(5).inset(10,10,0,-10).mark_base
     c << @setting_name_static.layout(0, c.base, -1, sh)
     c.pad_down(0).mark_base
-    c << @setting_name_combo.layout(0, c.base, -5, eh)
+    c << @setting_name_combo.layout(0, c.base, -1, eh)
     c.pad_down(5).mark_base
     c << @setting_delete_button.layout(0, c.base, "50%-5", eh)
-    c << @setting_add_button.layout("-50%+5", c.base, -5, eh)
+    c << @setting_add_button.layout("-50%+5", c.base, -1, eh)
     c.pad_down(5).mark_base
     c << add_account_instructions.layout(0, c.base, -1, 4*sh)
   end
@@ -375,7 +375,7 @@ class U500pxFileUploaderUI
   def layout_controls(container)
     sh, eh = 20, 24
 
-    container.inset(15, 5, -15, -5)
+    container.inset(15, 5, -5, -5)
 
     container.layout_with_contents(@dest_account_group_box, 0, 0, -1, -1) do |c|
       c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
@@ -394,64 +394,64 @@ class U500pxFileUploaderUI
       
       c << @meta_category_static.layout(0, c.base+3, 80, sh)
       c << @meta_category_combo.layout(c.prev_right, c.base, 185, eh)
-      c << @meta_nsfw_check.layout(c.prev_right+10, c.base, -5, sh)
+      c << @meta_nsfw_check.layout(c.prev_right+10, c.base, -1, sh)
       c.pad_down(5).mark_base
      
       c << @meta_license_type_static.layout(0, c.base+3, 80, sh)
       c << @meta_license_type_combo.layout(c.prev_right, c.base, 185, eh)
-      c << @meta_privacy_check.layout(c.prev_right+10, c.base, -5, sh)
+      c << @meta_privacy_check.layout(c.prev_right+10, c.base, -1, sh)
       c.pad_down(5).mark_base
 
       # Not sure why this one is neceassary to line up left and right...
       c.pad_down(1).mark_base
 
       c << @meta_name_static.layout(0, c.base, 80, sh)
-      c << @meta_name_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c << @meta_name_edit.layout(c.prev_right, c.base, -1, eh*2)
       c.pad_down(9).mark_base
       
       c << @meta_description_static.layout(0, c.base, 80, sh)
-      c << @meta_description_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c << @meta_description_edit.layout(c.prev_right, c.base, -1, eh*2)
       c.pad_down(9).mark_base
       
       c << @meta_tags_static.layout(0, c.base, 80, sh)
-      c << @meta_tags_edit.layout(c.prev_right, c.base, -5, eh*2)
+      c << @meta_tags_edit.layout(c.prev_right, c.base, -1, eh*2)
       c.pad_down(9).mark_base
 
       c.mark_base.size_to_base
     end
     
-    container.layout_with_contents(@meta_right_group_box, "-50%+5", container.base, -5, -1) do |c|
+    container.layout_with_contents(@meta_right_group_box, "-50%+5", container.base, -1, -1) do |c|
       c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
 
       # Not sure why this one is neceassary to line up left and right...
       c.pad_down(1).mark_base
 
       c << @meta_camera_static.layout(0, c.base, 80, sh)
-      c << @meta_camera_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_camera_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_lens_static.layout(0, c.base, 80, sh)
-      c << @meta_lens_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_lens_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_focal_length_static.layout(0, c.base, 80, sh)
-      c << @meta_focal_length_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_focal_length_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_aperture_static.layout(0, c.base, 80, sh)
-      c << @meta_aperture_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_aperture_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_shutter_speed_static.layout(0, c.base, 80, sh)
-      c << @meta_shutter_speed_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_shutter_speed_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_iso_static.layout(0, c.base, 80, sh)
-      c << @meta_iso_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_iso_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       # c << @meta_taken_at_static.layout(0, c.base, 80, sh)
-      # c << @meta_taken_at_edit.layout(c.prev_right, c.base, -5, eh)
+      # c << @meta_taken_at_edit.layout(c.prev_right, c.base, -1, eh)
       # c.pad_down(5).mark_base
       c << @meta_latitude_static.layout(0, c.base, 80, sh)
-      c << @meta_latitude_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_latitude_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @meta_longitude_static.layout(0, c.base, 80, sh)
-      c << @meta_longitude_edit.layout(c.prev_right, c.base, -5, eh)
+      c << @meta_longitude_edit.layout(c.prev_right, c.base, -1, eh)
       c.pad_down(5).mark_base
 
       c.mark_base.size_to_base
@@ -463,21 +463,21 @@ class U500pxFileUploaderUI
     container.pad_down(5).mark_base
 
     container.layout_with_contents(@operations_group_box, "50%+5", container.base, -1, -1) do |c|
-      c.set_prev_right_pad(5).inset(10,25,-10,-5).mark_base
+      c.set_prev_right_pad(5).inset(10,20,-10,-5).mark_base
 
       c << @apply_iptc_check.layout(0, c.base, "50%-5", eh)
-      c << @stationery_pad_btn.layout("-50%+5", c.base, -5, eh)
+      c << @stationery_pad_btn.layout("-50%+5", c.base, -1, eh)
       c.pad_down(5).mark_base
-      c << @preserve_exif_check.layout(0, c.base, -5, eh)
+      c << @preserve_exif_check.layout(0, c.base, -1, eh)
       c.pad_down(5).mark_base
 
-      c << @save_copy_check.layout(0, c.base, -5, eh)
+      c << @save_copy_check.layout(0, c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @save_copy_subdir_radio.layout(30, c.base, "50%-35", eh)
-      c << @save_copy_subdir_edit.layout("50%+5", c.base, -5, eh)
+      c << @save_copy_subdir_edit.layout("50%+5", c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @save_copy_userdir_radio.layout(30, c.base, "50%", eh)
-      c << @save_copy_choose_userdir_btn.layout("50%+5", c.base, -5, eh)
+      c << @save_copy_choose_userdir_btn.layout("50%+5", c.base, -1, eh)
       c.pad_down(5).mark_base
       c << @save_copy_userdir_static.layout(0, c.base, -1, 2*sh)
 
@@ -967,7 +967,7 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
     dlg = self
     client_width, client_height = dlg.get_clientrect_size
     c = LayoutContainer.new(0, 0, client_width, client_height)
-    c.inset(15, 10, -15, -10)
+    c.inset(10, 20, -10, -5)
 
     c << @code_static.layout(0, c.base, -1, sh)
     c.pad_down(0).mark_base
@@ -975,7 +975,7 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
     c.pad_down(5).mark_base
 
     bw = 80
-    c << @submit_button.layout(-(2*bw+2), -eh, bw, eh)
+    c << @submit_button.layout(-(2*bw+3), -eh, bw, eh)
     c << @cancel_button.layout(-bw, -eh, bw, eh)
   end
 
