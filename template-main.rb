@@ -855,20 +855,21 @@ class U500pxFileUploader
       "license_type" => @ui.meta_license_type_combo.get_selected_item.to_i.to_s,
       "privacy" => @ui.meta_privacy_check.checked? ? "1" : "0"
     }
-    # taken_at not allowed by 
+    # Setting taken_at currently not supported by 500px
     [ "name", "description", "shutter_speed", "focal_length", "aperture", "iso", "camera", "lens", "latitude", "longitude", "tags" ].each do |item|
       itemvalue = eval "@ui.meta_#{item}_edit.get_text"
       metadata[item] = itemvalue
     end
-    spec.metadata = []
+    spec.metadata = {}
     @num_files.times do |i|
       fname = @bridge.expand_vars("{folderpath}{filename}", i+1)
-      dbgprint "Building spec for image #{i+1} of #{@num_files}: #{fname}"
-      spec.metadata[i] = {}
+      unique_id = @bridge.get_item_unique_id(i+1) 
+      dbgprint "Building spec for image #{i+1} of #{@num_files}: #{unique_id} #{fname}"
+      spec.metadata[unique_id] = {}
       metadata.each_pair do |item, value|
         interpreted_value = @bridge.expand_vars(value, i+1)
         dbgprint "#{i+1} => #{item} = #{interpreted_value}"
-        spec.metadata[i][item] = interpreted_value
+        spec.metadata[unique_id][item] = interpreted_value
       end
     end
   end
@@ -945,8 +946,8 @@ class U500pxCodeVerifierDialog < Dlg::DynModalChildDialog
 
     create_control(:code_static,   Static,      dlg, :label=>"Enter the verification code:")
     create_control(:code_edit,     EditControl, dlg, :value=>"", :persist=>false)
-    create_control(:submit_button, Button,      dlg, :label=>"Submit")
-    create_control(:cancel_button, Button,      dlg, :label=>"Cancel")
+    create_control(:submit_button, Button,      dlg, :label=>"Submit", :does=>"ok")
+    create_control(:cancel_button, Button,      dlg, :label=>"Cancel", :does=>"cancel")
 
     @submit_button.on_click { get_access_token }
     @cancel_button.on_click { closebox_clicked }
@@ -1198,7 +1199,6 @@ class U500pxUploadProtocol
     @dialog = options[:dialog]
     @connection_settings_serializer = options[:connection_settings_serializer]
     @config = nil
-    @uploadnr = 0
     mute_transfer_status
     close
   end
@@ -1273,16 +1273,9 @@ class U500pxUploadProtocol
   end
 
   def upload(fname, remote_filename, spec)
-    dbgprint "Upload Job: #{@uploadnr}"
-    raise "Can't do" if @uploadnr >= spec.num_files
-    metadata_qstr = create_query_string(spec.metadata[@uploadnr])
+    dbgprint "Upload id: #{spec.unique_id} #{remote_filename} #{fname}"
+    metadata_qstr = create_query_string(spec.metadata[spec.unique_id])
     dbgprint "METASTR=#{metadata_qstr}"
-    @uploadnr += 1
-    # FIXME the reset should actually occur when a new object is initialised
-    # or otherwise at the beginning of an upload, somehow this doesn't work???
-    # I even tried using a class variable @@uploadnr, but even that seemed to stay
-    # at the original value since last run
-    @uploadnr = 0 if @uploadnr >= spec.num_files
 
     begin
       @mute_transfer_status = false
