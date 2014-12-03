@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 ##############################################################################
 # Copyright (c) 2014 Camera Bits, Inc.  All rights reserved.
 #
@@ -848,6 +849,30 @@ class U500pxFileUploader
     spec
   end
 
+  def convertGPS(gpscoordinate)
+    gpscoordinate = gpscoordinate.strip
+    if !gpscoordinate.empty?
+      if !(gpscoordinate =~ /^[\d.+-]+$/).nil?
+        gpscoordinate = gpscoordinate.to_f
+      elsif !(gpscoordinate =~ /^[NESW]?\s*([\d.+-]+[°'′"″]){1,3}(\s*[NESW])?$/).nil?
+        # Coordinates can be given as 
+        angle  = 0
+        gpscoordinate.scan(/([\d.+-]+)([°'′"″])/) { |n, denominator|
+          n = n.to_f
+          n /= 60 if denominator != '°' # Minutes or seconds
+          n /= 60 if denominator == '"' || denominator == '″' # Seconds
+          angle += n
+        }
+        angle *= (gpscoordinate =~ /[SW]/).nil? ? 1 : -1 # Negative numbers if coordinate in S or W
+        gpscoordinate = "#{angle}"
+      else
+        dbgprint "Invalid GPS coordinate specification: #{gpscoordinate}"
+        gpscoordinate = ""
+      end
+    end
+    gpscoordinate
+  end
+
   def build_imagemetadata_spec(spec, ui)
     metadata = {
       "category" => @ui.meta_category_combo.get_selected_item.to_i.to_s,
@@ -864,11 +889,10 @@ class U500pxFileUploader
     @num_files.times do |i|
       fname = @bridge.expand_vars("{folderpath}{filename}", i+1)
       unique_id = @bridge.get_item_unique_id(i+1) 
-      dbgprint "Building spec for image #{i+1} of #{@num_files}: #{unique_id} #{fname}"
       spec.metadata[unique_id] = {}
       metadata.each_pair do |item, value|
         interpreted_value = @bridge.expand_vars(value, i+1)
-        dbgprint "#{i+1} => #{item} = #{interpreted_value}"
+        interpreted_value = convertGPS(interpreted_value) if !(item =~ /^(long|lat)itude$/).nil?
         spec.metadata[unique_id][item] = interpreted_value
       end
     end
@@ -1073,18 +1097,14 @@ class U500pxClient
     @access_token = result['oauth_token']
     @access_token_secret = result['oauth_token_secret']
 
-    dbgprint "Got access token: TOKEN=#{result['oauth_token'].to_s} SECRET=#{result['oauth_token_secret'].to_s}"
     raise "Unable to verify code" unless authenticated?
 
     # Now we get the name from the user record on 500px
     @verifier = nil
     response = get('users')
-    dbgprint "USERSRES=#{response}"
-    dbgprint "USERSBODY=#{response.body}"
     require_server_success_response(response)
     response_body = JSON.parse(response.body)
     @name = "#{response_body['user']['username']} (#{response_body['user']['fullname']})"
-    dbgprint "Found NAME=#{@name}"
     @verifier = verifier
     
     [ @access_token, @access_token_secret, @name ]
@@ -1273,16 +1293,12 @@ class U500pxUploadProtocol
   end
 
   def upload(fname, remote_filename, spec)
-    dbgprint "Upload id: #{spec.unique_id} #{remote_filename} #{fname}"
     metadata_qstr = create_query_string(spec.metadata[spec.unique_id])
-    dbgprint "METASTR=#{metadata_qstr}"
 
     begin
       @mute_transfer_status = false
       # Post photos 500px api call to get upload_key & photo_id
       response = post('photos' + metadata_qstr)
-      dbgprint "RESP1=#{response}"
-      dbgprint "BODY1=#{response.body}"
       require_server_success_response(response)
       response_body = JSON.parse(response.body)
       upload_qstr = create_query_string(
@@ -1291,7 +1307,6 @@ class U500pxUploadProtocol
           "consumer_key" => API_KEY,
           "access_key" => spec.token
         })
-      dbgprint "UPLOADSTR=" + upload_qstr
       
       # Upload image to 500px
       fcontents = @bridge.read_file_for_upload(fname)
@@ -1303,8 +1318,6 @@ class U500pxUploadProtocol
       uri = URI.parse(url)
       ensure_open_http(uri.host, uri.port)
       response = @http.send(:post, uri.request_uri, data, headers)
-      dbgprint "RESP2=#{response}"
-      dbgprint "BODY2=#{response.body}"
       require_server_success_response(response)
       
     ensure
