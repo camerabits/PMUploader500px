@@ -271,11 +271,6 @@ class U500pxFileUploaderUI
     @bridge = pm_api_bridge
   end
 
-  # Is this function necessary???
-#  def operations_enabled?
-#    false
-#  end
-
   def create_controls(parent_dlg)
     dlg = parent_dlg
 
@@ -533,14 +528,6 @@ class U500pxBackgroundDataFetchWorker
     @client = U500pxClient.new(@bridge)
   end
 
-  # Do we need these two???
-  #  def account
-  #    @dlg.account
-  #  end
-
-  #  def configuration
-  #  end
-
   def do_task
     return unless @dlg.account_parameters_dirty
     success = false
@@ -709,7 +696,7 @@ class U500pxFileUploader
       @ui.dest_account_combo.set_selected_item( selected_settings_name )
     end
 
-    # if selection didn't take, and we have items in the list, just pick the 1st one
+    # If selection didn't take, and we have items in the list, just pick the 1st one
     if @ui.dest_account_combo.get_selected_item.empty? &&  @ui.dest_account_combo.num_items > 0
       @ui.dest_account_combo.set_selected_item( @ui.dest_account_combo.get_item_at(0) )
     end
@@ -763,7 +750,6 @@ class U500pxFileUploader
   end
 
   def disable_ui
-    # @ui.tweet_edit.enable(false)
     @ui.send_button.enable(false)
   end
 
@@ -800,11 +786,11 @@ class U500pxFileUploader
   def build_upload_spec(acct, ui)
     spec = AutoStruct.new
 
-    # string displayed in upload progress dialog title bar:
+    # String displayed in upload progress dialog title bar:
     spec.upload_display_name  = "500px.com:#{ui.dest_account_combo.get_selected_item}"
-    # string used in logfile name, should have NO spaces or funky characters:
+    # String used in logfile name, should have NO spaces or funky characters:
     spec.log_upload_type      = TEMPLATE_DISPLAY_NAME.tr('^A-Za-z0-9_-','')
-    # account string displayed in upload log entries:
+    # Account string displayed in upload log entries:
     spec.log_upload_acct      = spec.upload_display_name
 
     # Token and secret
@@ -835,11 +821,6 @@ class U500pxFileUploader
 
     build_jpeg_spec(spec, ui)
     build_image_processing_spec(spec, ui)
-
-    # spec.apply_stationery_pad = false
-    # spec.preserve_exif = false
-    # spec.save_transmitted_photos = false
-    # spec.save_photos_subdir_type = 'specific'
 
     build_operations_spec(spec, ui)
 
